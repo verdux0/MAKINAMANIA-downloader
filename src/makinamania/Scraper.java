@@ -84,7 +84,7 @@ public class Scraper {
         for (String link : downloadLinks) {
             if (stopRequested)
                 return false;
-            if (Checker2.checkLink(link, hoster)) {
+            if (Checker.checkLink(link, hoster)) {
                 return true;
             }
         }

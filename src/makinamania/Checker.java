@@ -55,11 +55,14 @@ public class Checker {
 
         String type = matcher.group(1);
         String id = matcher.group(2);
+        // String key = matcher.group(3); // Unused for now but captured
 
         String payload;
         if ("folder".equals(type)) {
             payload = "[{\"a\":\"f\",\"c\":1,\"r\":1,\"ca\":1}]";
         } else {
+            // Simple JSON construction. Since ID is \w- (alphanumeric+dash), it's safe to
+            // put in quotes without escaping.
             payload = String.format("[{\"a\":\"g\",\"p\":\"%s\"}]", id);
         }
 
