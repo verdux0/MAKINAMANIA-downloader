@@ -18,52 +18,37 @@ public class JsonUtils {
     private static final String DEFAULT_JSON_FILE = "resources/posts.json";
     private static final String DEFAULT_SCANNED_URLS_PATH = "resources/scanned.json";
 
-    // Shared ObjectMapper instance (Optimización)
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    // Optimización 1: Reutilizar TypeReference para evitar instanciación constante
     private static final TypeReference<List<Post>> POST_LIST_TYPE = new TypeReference<List<Post>>() {
     };
     private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<List<String>>() {
     };
 
-    // Optimización 4: Locks separados para reducir contención
     private static final Object POSTS_LOCK = new Object();
     private static final Object URLS_LOCK = new Object();
 
     static {
-        // Configure once
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
 
-    // --- Post Methods ---
-
-    /**
-     * Merge new posts with existing posts and save to file.
-     * Synchronized on POSTS_LOCK to prevent file write collisions while allowing
-     * URL operations.
-     */
     public static void toJson(List<Post> newPosts, String filePath) {
         synchronized (POSTS_LOCK) {
-            Set<Post> allPosts = new LinkedHashSet<>(); // Maintains insertion order, avoids duplicates
+            Set<Post> allPosts = new LinkedHashSet<>();
 
-            // 1. Load existing posts (if any)
             try {
                 List<Post> existingPosts = loadPosts(filePath);
                 allPosts.addAll(existingPosts);
             } catch (IOException e) {
-                // Logueamos aquí porque es una recuperación de error (crear nuevo archivo)
                 ConsoleLogger.info("Note: Could not load existing posts (creating new file): " + e.getMessage());
             }
 
-            // 2. Add new posts (deduplication happens here via Set)
             int beforeSize = allPosts.size();
             allPosts.addAll(newPosts);
             int afterSize = allPosts.size();
 
             ConsoleLogger.info("Added " + (afterSize - beforeSize) + " new unique posts.");
 
-            // 3. Save merged list
             saveAllPostsInternal(allPosts, filePath);
         }
     }
@@ -72,10 +57,6 @@ public class JsonUtils {
         toJson(newPosts, DEFAULT_JSON_FILE);
     }
 
-    /**
-     * Load posts from file.
-     * Optimización 3: Eliminado log redundante de error, el llamante decidirá.
-     */
     public static List<Post> loadPosts(String filePath) throws IOException {
         File jsonFile = new File(filePath);
 
@@ -84,7 +65,6 @@ public class JsonUtils {
             return new ArrayList<>();
         }
 
-        // Optimización 1: Uso de constante POST_LIST_TYPE
         List<Post> posts = mapper.readValue(jsonFile, POST_LIST_TYPE);
         ConsoleLogger.success("Successfully loaded " + posts.size() + " posts from: " + filePath);
         return posts;
@@ -94,10 +74,6 @@ public class JsonUtils {
         return loadPosts(DEFAULT_JSON_FILE);
     }
 
-    /**
-     * Overwrites the file with the given list of posts.
-     * Synchronized on POSTS_LOCK.
-     */
     public static void saveAllPosts(List<Post> posts, String filePath) {
         synchronized (POSTS_LOCK) {
             saveAllPostsInternal(posts, filePath);
@@ -108,8 +84,6 @@ public class JsonUtils {
         saveAllPosts(posts, DEFAULT_JSON_FILE);
     }
 
-    // Internal helper to avoid code duplication
-    // No synch logic here, caller must provide it
     private static void saveAllPostsInternal(Object data, String filePath) {
         File jsonFile = new File(filePath);
         ensureDirectoryExists(jsonFile);
@@ -117,10 +91,7 @@ public class JsonUtils {
         try {
             mapper.writeValue(jsonFile, data);
 
-            int size = 0;
-            if (data instanceof java.util.Collection) {
-                size = ((java.util.Collection<?>) data).size();
-            }
+            int size = data instanceof java.util.Collection ? ((java.util.Collection<?>) data).size() : 0;
             ConsoleLogger.success("Successfully saved " + size + " items to: " + filePath);
 
         } catch (IOException e) {
@@ -128,11 +99,8 @@ public class JsonUtils {
         }
     }
 
-    // --- URL Methods ---
-
     public static void saveScannedUrls(Set<String> scannedUrls, String filePath) {
         synchronized (URLS_LOCK) {
-            // We enforce uniqueness via the input Set.
             saveAllPostsInternal(scannedUrls, filePath);
         }
     }
@@ -146,14 +114,12 @@ public class JsonUtils {
 
         if (!jsonFile.exists()) {
             ConsoleLogger.info("ℹ Scanned URLs file not found, starting fresh");
-            return ConcurrentHashMap.newKeySet(); // Optimización 2: Mejor fábrica para Set concurrente
+            return ConcurrentHashMap.newKeySet();
         }
 
         try {
-            // Optimización 1: Uso de constante STRING_LIST_TYPE
             List<String> urls = mapper.readValue(jsonFile, STRING_LIST_TYPE);
 
-            // Optimización 2: Inicialización directa
             Set<String> urlSet = ConcurrentHashMap.newKeySet(urls.size());
             urlSet.addAll(urls);
 
@@ -169,9 +135,6 @@ public class JsonUtils {
         return loadScannedUrls(DEFAULT_SCANNED_URLS_PATH);
     }
 
-    /**
-     * Filtra URLs nuevas que no han sido procesadas
-     */
     public static List<String> filterNewUrls(List<String> allUrls, Set<String> processedUrls) {
         return allUrls.stream()
                 .filter(url -> !processedUrls.contains(url))
@@ -179,16 +142,8 @@ public class JsonUtils {
     }
 
     public static void addUrlAndSave(Set<String> processedUrls, String url) {
-        // Optimización 5: Limpieza de código muerto y mejora de lógica
-        // Si processedUrls es concurrente (que lo es por loadScannedUrls), add es
-        // seguro,
-        // pero necesitamos atomisidad si fueramos a guardar inmediatamente.
-        // Dado que guardar en cada add es costoso (IO), se recomienda hacerlo en batch.
-        // Aquí solo la añadimos a memoria.
         processedUrls.add(url);
     }
-
-    // --- Helpers ---
 
     private static void ensureDirectoryExists(File file) {
         File parentDir = file.getParentFile();

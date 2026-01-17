@@ -1,5 +1,3 @@
-
-
 package makinamania;
 
 import java.io.IOException;
@@ -13,7 +11,7 @@ import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Checker {
+public class Checker2 {
 
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -49,7 +47,6 @@ public class Checker {
     public static boolean checkMegaLink(String url) {
         Matcher matcher = MEGA_REGEX.matcher(url);
         if (!matcher.matches()) {
-            System.out.println("enlace falso: " + url);
             return false;
         }
 
@@ -77,12 +74,10 @@ public class Checker {
             String body = response.body().trim();
 
             if (body.startsWith("[-")) {
-                System.out.println("enlace falso: " + url);
                 return false;
             } else if (body.startsWith("[{")) {
                 return true;
             } else {
-                System.out.println("enlace falso: " + url);
                 return false;
             }
 
@@ -130,4 +125,3 @@ public class Checker {
         }
     }
 }
-

@@ -20,7 +20,6 @@ public class PostManager {
         this.searchField = searchField;
     }
 
-    // Método principal para cargar posts en la lista
     public void loadPostsIntoList(List<Post> posts) {
         updatePosts(posts);
     }
@@ -61,7 +60,6 @@ public class PostManager {
         updatePosts(newPosts);
     }
 
-    // Aplicar filtros basados en búsqueda y hoster
     public void applyCurrentFilter() {
         String searchText = searchField.getText().trim().toLowerCase();
 
@@ -72,7 +70,6 @@ public class PostManager {
         updateListModel(filteredPosts);
     }
 
-    // Filtrar por hoster específico
     public void filterPostsByHoster(String hoster) {
         String searchText = searchField.getText().trim().toLowerCase();
 
@@ -85,7 +82,6 @@ public class PostManager {
         updateListModel(filteredPosts);
     }
 
-    // Actualizar el modelo de lista visual (Thread Safe)
     private void updateListModel(List<Post> postsToShow) {
         SwingUtilities.invokeLater(() -> {
             listModel.clear();
@@ -96,19 +92,15 @@ public class PostManager {
         });
     }
 
-    // Búsqueda en diferentes campos del post
     private boolean matchesSearch(Post post, String searchText) {
-        // Buscar en el autor
         if (post.getAuthor() != null && post.getAuthor().toLowerCase().contains(searchText)) {
             return true;
         }
 
-        // Buscar en las referencias
         if (post.getReference() != null && post.getReference().toLowerCase().contains(searchText)) {
             return true;
         }
 
-        // Buscar en los títulos de álbumes
         if (post.getAlbumTitles() != null) {
             for (String title : post.getAlbumTitles()) {
                 if (title.toLowerCase().contains(searchText)) {
@@ -117,7 +109,6 @@ public class PostManager {
             }
         }
 
-        // Buscar en enlaces de Discogs
         if (post.getDiscogs() != null) {
             for (String discog : post.getDiscogs()) {
                 if (discog.toLowerCase().contains(searchText)) {
@@ -126,7 +117,6 @@ public class PostManager {
             }
         }
 
-        // Buscar en enlaces de descarga
         if (post.getDownloadLinks() != null) {
             for (String link : post.getDownloadLinks()) {
                 if (link.toLowerCase().contains(searchText)) {
@@ -138,25 +128,18 @@ public class PostManager {
         return false;
     }
 
-    // Eliminar posts seleccionados
     public void deleteSelectedPosts(JList<Post> postsList) throws Exception {
         int[] indices = postsList.getSelectedIndices();
         if (indices.length == 0)
             return;
 
-        // Eliminar de listModel y allPosts
         List<Post> toRemove = new ArrayList<>();
-        // Collect items to remove first to avoid index issues
         for (int i : indices) {
-            // Note: indices from getSelectedIndices are sorted ascending
-            // But listModel might change if we remove one by one?
-            // Better to get objects from listModel first
             if (i >= 0 && i < listModel.size()) {
                 toRemove.add(listModel.get(i));
             }
         }
 
-        // Remove from allPosts and existingIds
         for (Post p : toRemove) {
             allPosts.remove(p);
             if (p.getId() != null) {
@@ -164,19 +147,15 @@ public class PostManager {
             }
         }
 
-        // Update UI
         applyCurrentFilter();
 
-        // Persistir en JSON
         savePostsToJson();
     }
 
-    // Guardar los posts actuales en el JSON
     private void savePostsToJson() throws Exception {
         JsonUtils.saveAllPosts(allPosts);
     }
 
-    // Getters
     public List<Post> getAllPosts() {
         return new ArrayList<>(allPosts);
     }
@@ -189,7 +168,6 @@ public class PostManager {
         return listModel.size();
     }
 
-    // Limpiar todos los posts
     public void clearAllPosts() {
         allPosts.clear();
         existingIds.clear();

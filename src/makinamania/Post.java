@@ -3,16 +3,16 @@ package makinamania;
 import java.util.List;
 
 public class Post {
-    private String id; // Post URL
-    private String reference; // Post reference (title/subject)
-    private String author; // Autor del post
-    private String text; // Texto del post
-    private List<String> quotes; // Quotes (makinamania reply links)
-    private List<String> downloadLinks; // External download links
-    private List<String> discogs; // Discogs links
-    private List<String> images; // Image links (excluding forum smileys)
-    private List<String> albumTitles; // album title
-    private String hoster; // Texto del post
+    private String id;
+    private String reference;
+    private String author;
+    private String text;
+    private List<String> quotes;
+    private List<String> downloadLinks;
+    private List<String> discogs;
+    private List<String> images;
+    private List<String> albumTitles;
+    private String hoster;
     private boolean linkAlive = false;
 
     public Post(String id,
@@ -40,7 +40,6 @@ public class Post {
 
     }
 
-    // Constructor vacío necesario para Jackson
     public Post() {
     }
 
@@ -180,7 +179,7 @@ public class Post {
         if (str == null)
             return "N/A";
         if (str.length() <= max)
-            return String.format("%-" + max + "s", str); // Pad with spaces
+            return String.format("%-" + max + "s", str);
         return str.substring(0, max - 3) + "...";
     }
 }

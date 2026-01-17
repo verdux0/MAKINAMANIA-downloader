@@ -16,10 +16,8 @@ public class Scraper {
             "swisstransfer", "mega.nz", "terabox", "mediafire", "rapidgator",
             "drive", "dropbox", "wetransfer");
 
-    // Thread-safe cache
     private static final Map<String, String> DISCOGS_CACHE = new ConcurrentHashMap<>();
 
-    // Stop flag
     private static volatile boolean stopRequested = false;
 
     public static void stop() {
@@ -30,15 +28,11 @@ public class Scraper {
         stopRequested = false;
     }
 
-    // ======================================
-    // MAIN SCRAPING METHOD - OPTIMIZADO
-    // ======================================
     public static List<Post> scrapePosts(String url) {
         if (stopRequested)
             return new ArrayList<>();
 
         try {
-            // Added timeout
             Document doc = Jsoup.connect(url).timeout(10000).get();
 
             List<Post> posts = new ArrayList<>();
@@ -58,9 +52,6 @@ public class Scraper {
         }
     }
 
-    // ======================================
-    // POST PARSING - SIMPLIFICADO
-    // ======================================
     public static Post parsePost(Element post) {
         List<String> downloadLinks = extractDownloadLinks(post);
 
@@ -82,7 +73,7 @@ public class Scraper {
                 extractImages(post),
                 extractAlbumTitles(discogsLinks),
                 hoster,
-                false // El estado vivo se determinará después
+                false
         );
     }
 
@@ -93,18 +84,14 @@ public class Scraper {
         for (String link : downloadLinks) {
             if (stopRequested)
                 return false;
-            if (Checker.checkLink(link, hoster)) {
+            if (Checker2.checkLink(link, hoster)) {
                 return true;
             }
         }
         return false;
     }
 
-    // ======================================
-    // HOSTER EXTRACTION - OPTIMIZADO
-    // ======================================
     public static String extractHoster(List<String> downloadLinks) {
-        // Optimized to avoid multiple stream passes
         Map<String, Long> counts = new HashMap<>();
 
         for (String link : downloadLinks) {
@@ -122,9 +109,6 @@ public class Scraper {
                 .orElse("unknown");
     }
 
-    // ======================================
-    // EXTRACTION METHODS - OPTIMIZADOS
-    // ======================================
     private static String extractId(Element post) {
         Element parent = post.parent();
         if (parent == null)
@@ -137,7 +121,6 @@ public class Scraper {
     public static String normalizeId(String url) {
         if (url == null)
             return null;
-        // Elimina el parámetro PHPSESSID=... hasta el #
         return url.replaceAll("\\?PHPSESSID=[^#]+", "");
     }
 
@@ -168,9 +151,6 @@ public class Scraper {
         return element != null ? element.text() : defaultValue;
     }
 
-    // ======================================
-    // LINK EXTRACTION - REUTILIZADO
-    // ======================================
     private static List<String> extractLinks(Element post, Predicate<String> linkFilter) {
         Element content = post.clone();
         content.select(".bbc_standard_quote").remove();
@@ -204,7 +184,6 @@ public class Scraper {
         List<String> images = extractLinks(post, href -> href.matches(".*(postimg|imgur|iili).*") ||
                 href.matches(".*\\.(jpg|jpeg|png|gif)$"));
 
-        // Extraer imágenes de etiquetas img (excluyendo smileys)
         images.addAll(
                 post.select("img[src]").stream()
                         .map(img -> img.attr("src"))
@@ -218,9 +197,6 @@ public class Scraper {
         return src.contains("makinamania.com/Smileys") && src.endsWith(".gif");
     }
 
-    // ======================================
-    // QUOTE ANALYSIS - OPTIMIZADO
-    // ======================================
     public static boolean isQuote(Post post) {
         String text = post.getText().toLowerCase().trim();
         return text.startsWith("cita") || text.startsWith("quote");
@@ -246,9 +222,6 @@ public class Scraper {
         }
     }
 
-    // ======================================
-    // DISCOGS INTEGRATION - OPTIMIZADO
-    // ======================================
     public static List<String> extractAlbumTitles(List<String> discogsLinks) {
         return discogsLinks.stream()
                 .map(Scraper::getDiscogsTitle)
@@ -258,7 +231,6 @@ public class Scraper {
     }
 
     private static String getDiscogsTitle(String link) {
-        // Verificar cache primero
         if (DISCOGS_CACHE.containsKey(link)) {
             return DISCOGS_CACHE.get(link);
         }
@@ -266,13 +238,8 @@ public class Scraper {
         try {
             String title = extractTitleFromDiscogsUrl(link);
 
-            // Si no se pudo extraer del URL, hacer scraping
             if (title == null) {
                 title = fetchDiscogsTitleFromWeb(link);
-                // Removed Thread.sleep to avoid blocking, rely on timeouts and politeness
-                // elsewhere if needed
-                // or keep it if rate limiting is critical. Keeping it for safety but reducing
-                // it.
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {

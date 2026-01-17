@@ -71,7 +71,6 @@ public class ScrapingPanel extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.anchor = GridBagConstraints.WEST;
 
-        // URL input
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0;
@@ -85,7 +84,6 @@ public class ScrapingPanel extends JPanel {
         urlField.getDocument().addDocumentListener(new UrlValidationListener());
         panel.add(urlField, gbc);
 
-        // Pages input
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.weightx = 0;
@@ -99,7 +97,6 @@ public class ScrapingPanel extends JPanel {
         pagesField.getDocument().addDocumentListener(new PagesValidationListener());
         panel.add(pagesField, gbc);
 
-        // Buttons Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
         startButton = new JButton("Start Scraping");
@@ -215,8 +212,6 @@ public class ScrapingPanel extends JPanel {
             e.printStackTrace();
         }
     }
-
-    // --- Listeners y Workers ---
 
     private class UrlValidationListener implements DocumentListener {
         @Override

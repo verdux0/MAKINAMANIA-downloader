@@ -11,7 +11,6 @@ public class SearchDocumentListener implements DocumentListener {
     public SearchDocumentListener(PostManager postManager) {
         this.postManager = postManager;
 
-        // Timer con 1 segundo de retraso
         debounceTimer = new Timer(1000, e -> postManager.applyCurrentFilter());
         debounceTimer.setRepeats(false);
     }
@@ -32,6 +31,6 @@ public class SearchDocumentListener implements DocumentListener {
     }
 
     private void restartDebounce() {
-        debounceTimer.restart(); // cada vez que se escribe, reinicia el contador
+        debounceTimer.restart();
     }
 }

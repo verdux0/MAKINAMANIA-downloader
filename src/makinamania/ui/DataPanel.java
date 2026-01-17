@@ -30,7 +30,6 @@ public class DataPanel extends JPanel {
         }
     }
 
-    // Getters para que MainApp pueda configurar PostManager
     public DefaultListModel<Post> getListModel() {
         return listModel;
     }
@@ -45,7 +44,6 @@ public class DataPanel extends JPanel {
 
     public void setPostManager(PostManager pm) {
         this.postManager = pm;
-        // Ahora podemos añadir los listeners que dependen de postManager
         if (searchField != null) {
             searchField.getDocument().addDocumentListener(new SearchDocumentListener(postManager));
         }
@@ -55,10 +53,8 @@ public class DataPanel extends JPanel {
         setLayout(new BorderLayout(5, 5));
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // Top panel with count and buttons
         add(createDataTopPanel(), BorderLayout.NORTH);
 
-        // Split pane for list and details
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPane.setLeftComponent(createPostsListPanel());
         splitPane.setRightComponent(createPostDetailsPanel());

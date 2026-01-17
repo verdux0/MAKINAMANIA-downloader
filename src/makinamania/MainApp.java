@@ -27,7 +27,6 @@ public class MainApp extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setPreferredSize(new Dimension(1000, 700));
 
-        // Paneles y managers
         dataPanel = new DataPanel(null);
 
         postManager = new PostManager(

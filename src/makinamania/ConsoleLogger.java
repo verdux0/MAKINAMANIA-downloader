@@ -31,8 +31,6 @@ public class ConsoleLogger {
     }
 
     public static void debug(String message) {
-        // Uncomment to enable debug logs if needed, or keep for verbose mode
-        // log("DEBUG", "🐛", message);
         System.out.println(format("DEBUG", "🐛", message));
     }
 
@@ -43,7 +41,6 @@ public class ConsoleLogger {
     }
 
     public static void logging(String message) {
-        // Método genérico para enviar texto crudo a la consola si es necesario
         System.out.println(message);
         notifyListeners(message);
     }
