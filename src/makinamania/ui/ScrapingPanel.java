@@ -1,11 +1,10 @@
 package makinamania.ui;
 
 import makinamania.ConsoleLogger;
-import makinamania.ForoUtils;
 import makinamania.JsonUtils;
 import makinamania.Post;
 import makinamania.PostManager;
-import makinamania.Scraper;
+import makinamania.MakinamaniaScraper;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,9 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ScrapingPanel extends JPanel {
     private JTextField urlField;
+    private JTextField boardPagesField;
     private JTextField pagesField;
     private JProgressBar progressBar;
     private JLabel statusLabel;
+    private JLabel urlLabel;
+    private JLabel boardPagesLabel;
+    private JLabel pagesLabel;
     private JButton startButton;
     private JButton stopButton;
     private JTextPane consoleTextPane;
@@ -74,7 +77,7 @@ public class ScrapingPanel extends JPanel {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0;
-        JLabel urlLabel = new JLabel("Topic:");
+        urlLabel = new JLabel("Topic:");
         panel.add(urlLabel, gbc);
 
         gbc.gridx = 1;
@@ -84,10 +87,25 @@ public class ScrapingPanel extends JPanel {
         urlField.getDocument().addDocumentListener(new UrlValidationListener());
         panel.add(urlField, gbc);
 
+        // Fila para páginas de board (se muestra solo si la URL es un board)
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.weightx = 0;
-        JLabel pagesLabel = new JLabel("Pages:");
+        boardPagesLabel = new JLabel("Board pages:");
+        panel.add(boardPagesLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        boardPagesField = new JTextField(30);
+        boardPagesField.setToolTipText("Pages of the board to analyze (e.g. 1,2,5-10,*)");
+        boardPagesField.getDocument().addDocumentListener(new BoardPagesValidationListener());
+        panel.add(boardPagesField, gbc);
+
+        // Fila para páginas de topic
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.weightx = 0;
+        pagesLabel = new JLabel("Topic pages:");
         panel.add(pagesLabel, gbc);
 
         gbc.gridx = 1;
@@ -97,6 +115,10 @@ public class ScrapingPanel extends JPanel {
         pagesField.getDocument().addDocumentListener(new PagesValidationListener());
         panel.add(pagesField, gbc);
 
+        // Inicialmente el input de páginas de board está oculto
+        boardPagesLabel.setVisible(false);
+        boardPagesField.setVisible(false);
+
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
 
         startButton = new JButton("Start Scraping");
@@ -105,7 +127,7 @@ public class ScrapingPanel extends JPanel {
         stopButton = new JButton("Stop");
         stopButton.setEnabled(false);
         stopButton.addActionListener(e -> {
-            Scraper.stop();
+            MakinamaniaScraper.stop();
             if (currentWorker != null) {
                 currentWorker.cancel(true);
             }
@@ -117,7 +139,7 @@ public class ScrapingPanel extends JPanel {
         buttonPanel.add(stopButton);
 
         gbc.gridx = 0;
-        gbc.gridy = 2;
+        gbc.gridy = 3;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
         panel.add(buttonPanel, gbc);
@@ -233,11 +255,32 @@ public class ScrapingPanel extends JPanel {
             String url = urlField.getText().trim();
             if (url.isEmpty()) {
                 urlField.setBackground(Color.WHITE);
+                urlLabel.setText("Topic:");
+                boardPagesLabel.setVisible(false);
+                boardPagesField.setVisible(false);
                 return;
             }
-            boolean isValid = url.startsWith("https://www.makinamania.net/index.php/topic") &&
-                    url.matches("^https://www\\.makinamania\\.net/index\\.php/topic,\\d+(\\.\\d+)?\\.html$");
-            urlField.setBackground(isValid ? new Color(200, 255, 200) : new Color(255, 200, 200));
+            boolean isTopic = isTopicUrl(url);
+            boolean isBoard = isBoardUrl(url);
+
+            if (isTopic) {
+                urlField.setBackground(new Color(200, 255, 200));
+                urlLabel.setText("Topic:");
+                boardPagesLabel.setVisible(false);
+                boardPagesField.setVisible(false);
+            } else if (isBoard) {
+                urlField.setBackground(new Color(200, 255, 200));
+                urlLabel.setText("Board:");
+                boardPagesLabel.setVisible(true);
+                boardPagesField.setVisible(true);
+            } else {
+                urlField.setBackground(new Color(255, 200, 200));
+                urlLabel.setText("Board / Topic:");
+                boardPagesLabel.setVisible(false);
+                boardPagesField.setVisible(false);
+            }
+            urlField.getParent().revalidate();
+            urlField.getParent().repaint();
         }
     }
 
@@ -287,13 +330,59 @@ public class ScrapingPanel extends JPanel {
         }
     }
 
+    private class BoardPagesValidationListener implements DocumentListener {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            validateBoardPages();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            validateBoardPages();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            validateBoardPages();
+        }
+
+        private void validateBoardPages() {
+            String input = boardPagesField.getText().trim();
+            if (input.isEmpty()) {
+                boardPagesField.setBackground(Color.WHITE);
+                return;
+            }
+            try {
+                String[] parts = input.split(",");
+                for (String part : parts) {
+                    part = part.trim();
+                    if (part.equals("*"))
+                        continue;
+                    if (part.contains("-")) {
+                        String[] range = part.split("-");
+                        if (range.length != 2)
+                            throw new IllegalArgumentException();
+                        Integer.parseInt(range[0].trim());
+                        if (!range[1].trim().equals("*"))
+                            Integer.parseInt(range[1].trim());
+                    } else {
+                        Integer.parseInt(part);
+                    }
+                }
+                boardPagesField.setBackground(new Color(200, 255, 200));
+            } catch (Exception e) {
+                boardPagesField.setBackground(new Color(255, 200, 200));
+            }
+        }
+    }
+
     private class StartScrapingListener implements ActionListener {
         @Override
         public void actionPerformed(ActionEvent e) {
             if (!validateInputs())
                 return;
 
-            Scraper.reset();
+            MakinamaniaScraper.reset();
             startButton.setEnabled(false);
             stopButton.setEnabled(true);
 
@@ -303,17 +392,18 @@ public class ScrapingPanel extends JPanel {
 
         private boolean validateInputs() {
             String url = urlField.getText().trim();
-            String pages = pagesField.getText().trim();
+            String topicPages = pagesField.getText().trim();
+            String boardPages = boardPagesField.getText().trim();
 
-            if (url.isEmpty() || pages.isEmpty()) {
+            if (url.isEmpty() || topicPages.isEmpty()) {
                 JOptionPane.showMessageDialog(ScrapingPanel.this,
-                        "Please fill in both URL and pages fields", "Input Error", JOptionPane.ERROR_MESSAGE);
+                        "Please fill in URL and topic pages fields", "Input Error", JOptionPane.ERROR_MESSAGE);
                 return false;
             }
 
             if (urlField.getBackground().equals(new Color(255, 200, 200))) {
                 JOptionPane.showMessageDialog(ScrapingPanel.this,
-                        "Please enter a valid MakinaMania topic URL", "URL Error", JOptionPane.ERROR_MESSAGE);
+                        "Please enter a valid MakinaMania topic or board URL", "URL Error", JOptionPane.ERROR_MESSAGE);
                 return false;
             }
 
@@ -322,6 +412,21 @@ public class ScrapingPanel extends JPanel {
                         "Please enter valid page numbers (e.g., 1,2,3,4-7,8-*)", "Pages Error",
                         JOptionPane.ERROR_MESSAGE);
                 return false;
+            }
+
+            if (isBoardUrl(url)) {
+                if (boardPages.isEmpty()) {
+                    JOptionPane.showMessageDialog(ScrapingPanel.this,
+                            "Please enter board pages when using a board URL", "Board Pages Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
+                if (boardPagesField.getBackground().equals(new Color(255, 200, 200))) {
+                    JOptionPane.showMessageDialog(ScrapingPanel.this,
+                            "Please enter valid board page numbers (e.g., 1,2,3,4-7,8-*)", "Board Pages Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    return false;
+                }
             }
             return true;
         }
@@ -336,10 +441,29 @@ public class ScrapingPanel extends JPanel {
 
         @Override
         protected Void doInBackground() throws Exception {
-            String topicUrl = urlField.getText().trim();
-            String input = pagesField.getText().trim();
+            String url = urlField.getText().trim();
+            String topicPages = pagesField.getText().trim();
+            String boardPages = boardPagesField.getText().trim();
 
-            List<String> links = ForoUtils.genUrls(topicUrl, input);
+            if (isBoardUrl(url)) {
+                analyzeBoard(url, boardPages, topicPages);
+            } else {
+                analyzeTopic(url, topicPages);
+            }
+            return null;
+        }
+
+        private void analyzeBoard(String boardUrl, String boardPages, String topicPages) throws Exception {
+            List<String> links = MakinamaniaScraper.getTopicPageUrls(boardUrl, boardPages, topicPages);
+            processLinks(links);
+        }
+
+        private void analyzeTopic(String topicUrl, String topicPages) throws Exception {
+            List<String> links = MakinamaniaScraper.genUrls(topicUrl, topicPages);
+            processLinks(links);
+        }
+
+        private void processLinks(List<String> links) throws Exception {
             totalUrls = links.size();
 
             scannedUrls = JsonUtils.loadScannedUrls();
@@ -360,23 +484,10 @@ public class ScrapingPanel extends JPanel {
                 List<Callable<Void>> tasks = new ArrayList<>();
                 for (String link : linksToScrape) {
                     tasks.add(() -> {
-                        if (isCancelled())
+                        if (isCancelled()) {
                             return null;
-                        try {
-                            ConsoleLogger.scraping(String.valueOf(completed.get() + 1), String.valueOf(totalUrls),
-                                    link);
-                            List<Post> scrapedPosts = Scraper.scrapePosts(link);
-                            if (scrapedPosts != null && !scrapedPosts.isEmpty()) {
-                                ConsoleLogger.success("Found " + scrapedPosts.size() + " posts in " + link);
-                                posts.addAll(scrapedPosts);
-                            }
-                            JsonUtils.addUrlAndSave(scannedUrls, link);
-                            int currentCompleted = completed.incrementAndGet() + skippedUrls;
-                            int progress = (currentCompleted * 100) / totalUrls;
-                            publish(progress);
-                        } catch (Exception ex) {
-                            ConsoleLogger.error("Error scraping link: " + link + " -> " + ex.getMessage());
                         }
+                        analyzePostPage(link, skippedUrls);
                         return null;
                     });
                 }
@@ -384,7 +495,23 @@ public class ScrapingPanel extends JPanel {
             } finally {
                 executor.shutdown();
             }
-            return null;
+        }
+
+        private void analyzePostPage(String link, int skippedUrls) {
+            try {
+                ConsoleLogger.scraping(String.valueOf(completed.get() + 1), String.valueOf(totalUrls), link);
+                List<Post> scrapedPosts = MakinamaniaScraper.scrapePosts(link);
+                if (scrapedPosts != null && !scrapedPosts.isEmpty()) {
+                    ConsoleLogger.success("Found " + scrapedPosts.size() + " posts in " + link);
+                    posts.addAll(scrapedPosts);
+                }
+                JsonUtils.addUrlAndSave(scannedUrls, link);
+                int currentCompleted = completed.incrementAndGet() + skippedUrls;
+                int progress = (currentCompleted * 100) / totalUrls;
+                publish(progress);
+            } catch (Exception ex) {
+                ConsoleLogger.error("Error scraping link: " + link + " -> " + ex.getMessage());
+            }
         }
 
         @Override
@@ -448,5 +575,17 @@ public class ScrapingPanel extends JPanel {
                 currentWorker = null;
             }
         }
+    }
+
+    // Determina si una URL es de topic
+    private boolean isTopicUrl(String url) {
+        return url.startsWith("https://www.makinamania.net/index.php/topic") &&
+                url.matches("^https://www\\.makinamania\\.net/index\\.php/topic,\\d+(\\.\\d+)?\\.html.*$");
+    }
+
+    // Determina si una URL es de board
+    private boolean isBoardUrl(String url) {
+        return url.startsWith("https://www.makinamania.net/index.php/board") &&
+                url.matches("^https://www\\.makinamania\\.net/index\\.php/board,\\d+\\.\\d+.*$");
     }
 }
