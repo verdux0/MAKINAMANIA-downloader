@@ -2,7 +2,7 @@
 
 **Herramienta de scraping, filtrado y gestión de posts del foro [MAKINAMANIA.NET]("makinamania.net")**
 
->esta documentación se hizo pensando en enteder la herramienta de forma completa, no solo funcionalidad si no código, estructura y decisiones, >si no te interesa, aquí tienes el apartado que te enseña todo lo que necesitas saber para ponerla en marcha si eres novato
+>esta documentación se hizo pensando en enteder la herramienta de forma completa, no solo funcionalidad si no código, estructura y decisiones, si no te interesa, aquí tienes el apartado que te enseña todo lo que necesitas saber para ponerla en marcha si eres novato
 >[Instalación y Ejecución](#9-instalación-y-ejecución)
 
 
@@ -19,7 +19,7 @@ Este proyecto resuelve un problema personal concreto: **la dificultad para centr
 
 ### Problema real que resuelve
 
-En foros musicales clásicos como **makinamania** existe una enorme cantidad de contenido compartido a lo largo de los años: recopilaciones, discografías, rarezas y material difícil de encontrar. El problema es que este contenido suele estar **disperso, repetido, mal indexado o con enlaces que dejan de funcionar con el tiempo**, lo que hace muy difícil su preservación y consulta.
+En foros musicales clásicos como **makinamania** existe una enorme cantidad de contenido compartido de gran valor histórico pero su distribución anárquica lo hace muy difícil de preservar y consultar.
 
 Esta aplicación nace con el objetivo de **automatizar el análisis de hilos del foro** y extraer de forma inteligente los enlaces musicales publicados en los posts, transformando información caótica en una **colección estructurada y utilizable**.
 
@@ -88,14 +88,22 @@ El sistema sigue una arquitectura **modular en capas** con separación clara de 
 - **Responsabilidad**: Interacción con el usuario.
 - **Componentes**:
   - `ScrapingPanel`:panel de onfiguración y ejecución de scraping
+ 
+<img width="700px" src="resources/screenshots/scrapingW.png">
+    
   - `DataPanel`:panel de visualización, búsqueda y gestión de posts
 - **Comunicación**: Se comunica con `PostManager` para actualizar y gestionar la lista de `posts.json`
 
+<img width="700px" src="resources/screenshots/searchB.png">
+<img width="700px" src="resources/screenshots/searchbarB.png">
+
+  
+
 #### 2. **Business Logic Layer**
 - **`PostManager`**: Gestiona el estado global de posts, filtrado, búsqueda y operaciones CRUD
-- **`Scraper`**: Extrae datos estructurados desde HTML mediante Jsoup
+- **`MakinamaniaScraper`**: Extrae datos estructurados desde HTML mediante Jsoup
 - **`Checker`**: Valida enlaces mediante HEAD requests y APIs específicas de hosters (adios a los enlaces de mega caidos :D)
-- **`ForoUtils`**: Genera URLs de paginación basadas en patrones de entrada (esta es la parte que nos permitirá en un futuro expandir esta herramienta a más foros)
+- **`ahora en MakinamaniaScraper antes foroUtils`**: Genera URLs de paginación basadas en patrones de entrada (esta es la parte que nos permitirá en un futuro expandir esta herramienta a más foros)
 
 #### 3. **Persistence Layer**
 - **`JsonUtils`**: Serialización/deserialización con Jackson
@@ -149,7 +157,7 @@ El sistema sigue una arquitectura **modular en capas** con separación clara de 
    - `PagesValidationListener`: Valida sintaxis de rangos de páginas
 
 ### Fase 3: Generación de URLs
-1. **`ForoUtils.genUrls()`**:
+1. **`MakinamaniaScraper.genUrls()`**:
    - Parsea el patrón de entrada (ej: `1-5,10-*`)
    - Detecta el número total de páginas del hilo (`getTotalPages()`)
    - Genera URLs individuales con offset correcto (ej: `.0.html`, `.15.html`, `.30.html`)
@@ -211,11 +219,15 @@ El sistema sigue una arquitectura **modular en capas** con separación clara de 
 
 ---
 
-## 4. Componentes Clave
+<br>
+<br>
+<details>
+<summary>4. Componentes Clave [PROFUNDIZANDO EN LA EXPLICACIÓN ANTERIOR]</summary>
+
 
 ### 4.1 Scraper
 
-**Ubicación**: `makinamania.Scraper`
+**Ubicación**: `makinamani.MakinamaniaScraper`
 
 **Responsabilidad**: Extracción y transformación de datos HTML a objetos estructurados.
 
@@ -475,6 +487,10 @@ boolean linkAlive;          // Indica si al menos un enlace está activo
 
 ---
 
+</details>
+<br>
+<br>
+
 ## 7. Decisiones Tecnológicas
 
 ### 7.1 Java 17 (LTS)
@@ -490,7 +506,6 @@ boolean linkAlive;          // Indica si al menos un enlace está activo
 
 **Alternativas consideradas**:
 - **Python**: Más rápido para prototipos, pero JVM mejor para aplicaciones GUI complejas y concurrencia
-- **Go**: Excelente para scrapers CLI, pero ecosistema Swing/JavaFX más rico para GUI
 
 ---
 
@@ -508,14 +523,7 @@ boolean linkAlive;          // Indica si al menos un enlace está activo
 - **Selenium**: Overkill para scraping simple, requiere navegador
 - **Regex**: Frágil ante HTML malformado, mantenibilidad pobre
 
-**Ejemplo de robustez**:
-```java
-// Jsoup maneja HTML mal formado sin error
-Element link = post.selectFirst("a[href]"); // Retorna null si no existe
-String href = link != null ? link.attr("href") : ""; // Defensivo
-```
 
----
 
 ### 7.3 Jackson (Serialización JSON)
 
@@ -594,7 +602,7 @@ Entonces migrar a **SQLite** (embedded) o **PostgreSQL** (cliente-servidor).
 - **Sistemas operativos soportados**:
   - Linux (script `.sh`)
   - Windows (script `.bat`)
-  - macOS (script `.sh` con permisos)
+  - macOS ¿?
 
 ---
 
@@ -679,10 +687,9 @@ test/
 │       ├── MainApp.java                 # Punto de entrada, inicialización UI
 │       ├── Post.java                    # Modelo de datos (POJO)
 │       ├── PostManager.java             # Gestión de estado y filtrado
-│       ├── Scraper.java                 # Lógica de scraping (Jsoup)
+│       ├── MakinaManiaScraper.java      # Lógica de scraping (Jsoup)
 │       ├── Checker.java                 # Validación de enlaces
 │       ├── JsonUtils.java               # Persistencia JSON (Jackson)
-│       ├── ForoUtils.java               # Generación de URLs de paginación
 │       ├── ConsoleLogger.java           # Sistema de logging con listeners
 │       ├── SearchDocumentListener.java  # Listener de búsqueda en tiempo real
 │       └── ui/
@@ -707,52 +714,14 @@ test/
 ├── build.sh                             # Script de compilación (Linux/macOS)
 ├── build.bat                            # Script de compilación (Windows)
 ├── run.sh                               # Script de ejecución (Linux/macOS)
-├── run.bat                   # Script de ejecución (Windows)
+├── run.bat                              # Script de ejecución (Windows)
 ├── .gitignore                           # Exclusiones de Git
 └── README.md                            # Esta documentación
 ```
 
-### Directorios Clave
-
-**`src/makinamania/`**: Lógica de negocio y modelos
-- Paquete principal con clases core
-- Separación clara entre parsing, validación, persistencia
-
-**`src/makinamania/ui/`**: Componentes de interfaz
-- Panels independientes con responsabilidades únicas
-- Comunicación mediante `PostManager` compartido
-
-**`lib/`**: Dependencias externas
-- JARs incluidos directamente (no Maven/Gradle)
-- Versiones específicas para reproducibilidad
-
-**`resources/`**: Assets y datos persistentes
-- JSON con datos estructurados
-- Imágenes y recursos estáticos
-
-**`bin/`**: Output de compilación (no versionado)
-- Ignorado por `.gitignore`
-- Regenerado automáticamente por `build.sh`
-
----
-
-## 11. Capturas de Pantalla (UI / Flujos)
 
 
-## 11.1 Pantalla de Scraping
 
-<img width="700px" src="resources/screenshots/scrapingB.png">
-<img width="700px" src="resources/screenshots/scrapingW.png">
-
----
-
-## 11.2 Pantalla de Datos
-
-<img width="700px" src="resources/screenshots/dataW.png">
-<img width="700px" src="resources/screenshots/searchB.png">
-<img width="700px" src="resources/screenshots/searchbarB.png">
-
----
 
 ## 12. Consideraciones Éticas y Legales
 
